@@ -6,7 +6,7 @@ COPY	srcs/. /root/
 
 # Installing updates, wget and nginx
 RUN		apt-get update
-RUN		apt-get upgrade -y # The -y says yes to everything asked by the upgrade command
+RUN		apt-get upgrade -y
 RUN		apt-get -y install wget
 RUN		apt-get -y install apt-utils
 RUN		apt-get -y install nginx
@@ -25,10 +25,16 @@ RUN		mv /root/nginx.conf /etc/nginx/sites-available/localhost
 RUN		ln -s /etc/nginx/sites-available/localhost /etc/nginx/sites-enabled/
 # Does the default need to be removed?
 
-
-RUN		openssl req -x509 -nodes -new -sha256 -days 1024 -newkey rsa:2048 -keyout /etc/ssl/certs/localhost.key -out /etc/ssl/certs/localhost.crt -subj "/C=US/CN=AlexanderRoot-CA"
+# Configure SSL certificate
+RUN 		wget https://github.com/FiloSottile/mkcert/releases/download/v1.4.3/mkcert-v1.4.3-linux-amd64
+RUN			chmod 777 mkcert-v1.4.3-linux-amd64
+RUN			./mkcert-v1.4.3-linux-amd64 localhost
+RUN			rm -rf ./mkcert-v1.4.3-linux-amd64
+RUN			mv ./localhost.pem ./etc/nginx
+RUN			mv ./localhost-key.pem ./etc/nginx
+# RUN		openssl req -x509 -nodes -new -sha256 -days 1024 -newkey rsa:2048 -keyout /etc/ssl/certs/localhost.key -out /etc/ssl/certs/localhost.crt -subj "/C=US/CN=AlexanderRoot-CA"
 # Configure wordpress database
-Run		bash /root/sqlscript.sh
+RUN		bash /root/sqlscript.sh
 
 # Configure PHP
 WORKDIR	/var/www/html/
@@ -43,9 +49,10 @@ RUN		tar -xvzf latest.tar.gz && rm -rf latest.tar.gz
 RUN		mv /root/wp-config.php /var/www/html/
 
 # Change authorization
-RUN chown -R www-data:www-data *
-RUN chmod -R 755 /var/www/*
-CMD bash /root/init.sh && && nginx -g 'daemon off;'
+RUN		chown -R www-data:www-data *
+RUN		chmod -R 755 /var/www/*
+CMD		service mysql restart && service php7.3-fpm start && nginx -g 'daemon off;'
+# CMD bash /root/init.sh
 
 EXPOSE 80
 
